@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer"
+    />
+    <title>Practics with JS & Ajax</title>
+</head>
+
+<style>
+    .container {
+        display: table;
+        margin: auto;
+        width: 400px;
+    }
+    
+    .container>h1:nth-of-type(1) {
+        text-align: center;
+    }
+    
+    .container>p {
+        text-align: center;
+        color: brown;
+    }
+    
+    ul>li {
+        list-style: none;
+        padding: 10px;
+        background-color: rgb(96, 2, 2);
+        margin: 5px;
+        color: aliceblue;
+    }
+    
+    ul>li>span {
+        float: right;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+    
+    .container .btn {
+        color: black;
+        background-color: aqua;
+        border-radius: 10px;
+        padding: 5px;
+        cursor: pointer;
+    }
+    
+    .popup {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgb(0, 0, 0);
+        background-color: rgba(0, 0, 0, 0.4);
+    }
+    
+    .popup-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 5px;
+    }
+    
+    .close-btn {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    
+    .close-btn:hover,
+    .close-btn:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    
+    dialog {
+        border: none;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    #openDialog,
+    #closeDailog {
+        cursor: pointer;
+    }
+</style>
+
+<body>
+    <div class="container">
+        <h1>Todo List Application</h1>
+        <p>This is todo application here we will learn about crud operations</p>
+        <div>
+            <center><a class="btn" id="openDialog">Create New Task</a></center>
+            <dialog id="myDialog">
+                <div>
+                    <span class="close-btn" id="closeDailog">&times;</span>
+                    <h2>Create New Task</h2>
+                    <form id="taskForm" method="post">
+                        {% csrf_token %}
+                        <label for="taskName">Task Name:</label>
+                        <input type="text" id="taskName" name="taskName" required><br><br>
+                        <label for="taskDescription">Task Description:</label>
+                        <textarea id="taskDescription" name="taskDescription" required></textarea><br><br>
+                        <button type="submit">Submit</button>
+                    </form>
+                </div>
+            </dialog>
+
+            <ul>
+                {% for ta in taskAll%}
+                <li>{{ta.taskTitle}}:{{ta.taskMessage}}<span class="delete-task" data-taskId="{{ ta.id }}">X</span><span class="update-task" data-itemId="{{ ta.id }}"><i class="fa-solid fa-pen-to-square"></i></span></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Update Task Dialog -->
+    <dialog id="updateTaskDialog">
+        <form method="dialog" id="updateTaskForm">
+            {% csrf_token %}
+            <h3>Update Task</h3>
+            <input type="hidden" id="taskId">
+            <div>
+                <label for="taskTitle">Title:</label>
+                <input type="text" id="taskTitle" required>
+            </div>
+            <div>
+                <label for="taskMessage">Message:</label>
+                <textarea id="taskMessage" required></textarea>
+            </div>
+            <div>
+                <button id="cancelButton">Cancel</button>
+                <button id="saveButton" type="submit">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const dialog = document.getElementById('myDialog');
+            const openDailog = document.getElementById('openDialog');
+            const closeDailog = document.getElementById('closeDailog');
+            const form = document.getElementById('taskForm');
+            const taskTitle = document.getElementById('taskName');
+            const taskMessage = document.getElementById('taskDescription');
+
+            openDailog.addEventListener('click', () => {
+                dialog.showModal();
+                console.log("Dailog box is getting open now!!....")
+            });
+
+            closeDailog.addEventListener('click', () => {
+                dialog.close();
+                console.log("Dailog box is getting close now!!....")
+            });
+
+            // value submittion into db 
+            form.addEventListener('submit', async(e) => {
+                e.preventDefault();
+                const titleValues = taskTitle.value;
+                const messageValues = taskMessage.value;
+                /*console.log("Task Title:- ", titleValues);
+                console.log("Task message:- ", messageValues);*/
+
+                const response = await fetch('{% url "add-task" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({
+                        'taskTitle': titleValues,
+                        'taskMessage': messageValues,
+                    })
+                });
+
+                const data = await response.json();
+                console.log(data);
+
+                if (data.status === 'success') {
+                    alert('Task added successfully');
+                    form.reset();
+                    location.reload();
+                } else {
+                    alert('Failed to add task: ' + data.message);
+                }
+            });
+        });
+
+        // delete operation
+        document.querySelectorAll('.delete-task').forEach(item => {
+            item.addEventListener('click', async(e) => {
+                const taskId = e.target.getAttribute('data-taskId');
+                console.log('Deleting task with ID:', taskId);
+
+                const response = await fetch('{% url "delete-task" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({
+                        'taskId': taskId
+                    })
+                });
+
+                const data = await response.json();
+                console.log(data);
+
+                if (data.status === 'success') {
+                    alert('Task deleted successfully');
+                    // Remove the task from the DOM
+                    e.target.parentElement.remove();
+                } else {
+                    alert('Failed to delete task: ' + data.message);
+                }
+            });
+        });
+
+        document.querySelectorAll('.update-task').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const taskId = e.currentTarget.getAttribute('data-itemId');
+                document.getElementById('taskId').value = taskId;
+                // Open the dialog box
+                const dialog = document.getElementById('updateTaskDialog');
+                dialog.showModal();
+            });
+        });
+
+        const updateForm = document.getElementById('updateTaskForm');
+        updateForm.addEventListener('submit', async(e) => {
+            e.preventDefault();
+
+            const taskId = document.getElementById('taskId').value;
+            const taskTitle = document.getElementById('taskTitle').value;
+            const taskMessage = document.getElementById('taskMessage').value;
+
+            if (taskTitle && taskMessage) {
+                try {
+                    const response = await fetch('{% url "update-task" %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: new URLSearchParams({
+                                'taskId': taskId,
+                                'taskTitle': taskTitle,
+                                'taskMessage': taskMessage,
+                            })
+                            /*JSON.stringify({
+                                                       taskId: taskId,
+                                                       taskTitle: taskTitle,
+                                                       taskMessage: taskMessage
+                                                   })*/
+                    });
+
+                    const result = await response.json();
+                    alert(result.message);
+
+                    if (result.status === 'success') {
+                        document.getElementById('updateTaskDialog').close();
+                        updateForm.reset();
+                        location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error updating task:', error);
+                    alert('An error occurred while updating the task.');
+                }
+            } else {
+                alert('Both title and message are required to update the task.');
+            }
+        });
+
+        document.getElementById('cancelButton').addEventListener('click', () => {
+            document.getElementById('updateTaskDialog').close();
+        });
+    </script>
+</body>
+
+</html>
